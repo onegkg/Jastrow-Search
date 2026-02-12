@@ -1,37 +1,33 @@
 import { useState } from "react";
+import { getJastrowEntries } from "./api/Lexicon";
+import { DisplayDictionaryEntry } from "./Components/DisplayDictionaryEntry";
 import { SearchBar } from "./Components/SearchBar";
 import "./index.css";
-import { DisplayDictionaryEntry } from "./Components/DisplayDictionaryEntry";
 import type { WordResponseData } from "./types/types";
 
 export function App() {
-	const [results, setResults] = useState<WordResponseData>([]);
+  const [lexiconEntries, setLexiconEntries] = useState<WordResponseData>([]);
 
-	async function handleSearch(query: string) {
-		try {
-			const response = await fetch(
-				`https://www.sefaria.org/api/words/${encodeURIComponent(query)}`,
-			);
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
-			}
-			const data: WordResponseData = await response.json();
-			const jastrow = data.filter(
-				(entry) => entry.parent_lexicon === "Jastrow Dictionary",
-			);
-			setResults(jastrow);
-		} catch (err) {
-			console.error("Error fetching from Sefaria API:", err);
-		}
-	}
+  const handleSearch = async (query: string) => {
+    const results = await getJastrowEntries(query);
+    setLexiconEntries(results || []);
+  };
 
-	return (
-		<div>
-			<p>Hello World</p>
-			<SearchBar onSearch={handleSearch} />
-			<DisplayDictionaryEntry data={results} />
-		</div>
-	);
+  return (
+    // style: all elements centered with some padding, and max width of 900px for the results
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: "2rem",
+      }}
+    >
+      <h1>Jastrow Search</h1>
+      <SearchBar onSearch={handleSearch} />
+      <DisplayDictionaryEntry data={lexiconEntries} />
+    </div>
+  );
 }
 
 export default App;
