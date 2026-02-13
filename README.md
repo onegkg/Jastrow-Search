@@ -1,6 +1,5 @@
 To-Do
 - Refine DisplayDictionaryEntry to display the entry more clearly
-- Add a github link
 - Deploy
 - Write a proper README
 - Implement autocompletion on the searchbar

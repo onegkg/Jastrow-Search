@@ -6,7 +6,7 @@ import type {
 } from "../types/types";
 import { SanitizedHtml } from "./SanitizedHtml";
 
-export function DisplayDictionaryEntry({ data }: { data: WordResponseData }) {
+export function DisplayDictionaryEntries({ data }: { data: WordResponseData }) {
   // Handle case where data is not an array
   if (!Array.isArray(data)) {
     return (
