@@ -1,4 +1,4 @@
-To-Do
+## To-Do
 - Refine DisplayDictionaryEntry to display the entry more clearly
 - Deploy
 - Write a proper README
