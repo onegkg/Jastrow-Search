@@ -10,7 +10,6 @@
     "predeploy": "bun run build",
     "deploy": "gh-pages -d dist"
   },
-  "homepage": "https://onegkg.github.io/Jastrow-Search/",
   "dependencies": {
     "dompurify": "^3.3.1",
     "gh-pages": "^6.3.0",
