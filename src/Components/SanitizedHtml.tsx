@@ -37,7 +37,7 @@ interface SanitizedHtmlProps {
 /**
  * Renders an HTML string after sanitizing it with DOMPurify.
  *
- * Use this component for Sefaria API fields that contain embedded HTML
+ * Use this component for fields that contain embedded HTML
  * (e.g. `notes`, `derivatives`, `language_reference`, `definition`).
  */
 export function SanitizedHtml({
@@ -63,6 +63,7 @@ function replaceHTMLLinks(html: string): string {
   // Replace href attributes in <a> tags with absolute Sefaria URLs
   return html.replace(
     /<a\s+([^>]*?\s+)?href="([^"]+)"/g,
+    // match: the entire <a> tag, beforeHref: any attributes before href, href: the URL in the href attribute
     (match, beforeHref, href) => {
       // If the href is already an absolute URL, leave it as is
       if (/^https?:\/\//.test(href)) {

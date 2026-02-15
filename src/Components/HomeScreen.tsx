@@ -1,3 +1,4 @@
+// Home screen exclusive content. Currently contains links to the full Jastrow on Sefaria and the GitHub repo for this project. 
 export function HomeScreen() {
   return (
     <h4 style={{ marginTop: "2rem", textAlign: "center" }}>

@@ -5,16 +5,16 @@ type SearchBarProps = {
 };
 
 export function SearchBar({ onSearch }: SearchBarProps) {
+  // Local state to hold the current search query input by the user
   const [search, setSearch] = useState("");
+
+  // Calls onSearch with the trimmed and lowercased search query, then clears the input field.
   const handleSubmit: React.SubmitEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
-
     if (!search.trim) {
       return;
     }
-
     onSearch(search.trim().toLowerCase());
-
     setSearch("");
   };
 

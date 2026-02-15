@@ -380,18 +380,6 @@ function DictionaryEntryCard({ entry }: { entry: DictionaryEntry }) {
         {entry.prev_hw && <span>← Previous: {entry.prev_hw}</span>}
         {entry.next_hw && <span>Next: {entry.next_hw} →</span>}
       </div>
-
-      {/* Lexicon details */}
-      {entry.parent_lexicon_details && (
-        <details
-          style={{ marginTop: "0.5rem", fontSize: "0.85em", color: "#aaa" }}
-        >
-          <summary style={{ cursor: "pointer" }}>Lexicon Details</summary>
-          <pre style={{ marginTop: "0.5rem", fontSize: "0.8em" }}>
-            {JSON.stringify(entry.parent_lexicon_details, null, 2)}
-          </pre>
-        </details>
-      )}
     </div>
   );
 }
