@@ -2,6 +2,7 @@
 node_modules
 .api/
 test.json
+package-lock.json
 
 # output
 out
