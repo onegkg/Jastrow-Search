@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.14",
+    "@happy-dom/global-registrator": "^20.7.0",
     "@types/bun": "latest",
     "@types/dompurify": "^3.2.0",
     "@types/react": "^19",
