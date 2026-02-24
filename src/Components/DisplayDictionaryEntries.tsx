@@ -164,11 +164,6 @@ function DictionaryEntryCard({ entry }: { entry: DictionaryEntry }) {
         }}
       >
         {lexiconName}
-        {entry.rid && (
-          <span style={{ marginLeft: "0.5rem", color: "#888" }}>
-            ({entry.rid})
-          </span>
-        )}
       </div>
 
       {/* Headword */}
