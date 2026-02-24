@@ -72,18 +72,31 @@ function SenseDisplay({ sense }: { sense: Sense }) {
       )}
 
       {sense.definition ? (
-        <SanitizedHtml html={sense.definition} replaceLinks={true} />
+        <SanitizedHtml
+          html={sense.definition}
+          replaceLinks={true}
+          replaceEmDashes={true}
+        />
       ) : null}
 
       {sense.note && (
         <div style={{ marginTop: "0.25rem", fontSize: "0.9em", color: "#bbb" }}>
-          Note: <SanitizedHtml html={sense.note} replaceLinks={true} />
+          Note:{" "}
+          <SanitizedHtml
+            html={sense.note}
+            replaceLinks={true}
+            replaceEmDashes={true}
+          />
         </div>
       )}
 
       {sense.notes && (
         <div style={{ marginTop: "0.25rem", fontSize: "0.9em", color: "#bbb" }}>
-          <SanitizedHtml html={sense.notes} replaceLinks={true} />
+          <SanitizedHtml
+            html={sense.notes}
+            replaceLinks={true}
+            replaceEmDashes={true}
+          />{" "}
         </div>
       )}
 
@@ -325,7 +338,11 @@ function DictionaryEntryCard({ entry }: { entry: DictionaryEntry }) {
           }}
         >
           <strong>Notes:</strong>{" "}
-          <SanitizedHtml html={entry.notes} replaceLinks={true} />
+          <SanitizedHtml
+            html={entry.notes}
+            replaceLinks={true}
+            replaceEmDashes={true}
+          />
         </div>
       )}
 
@@ -333,7 +350,11 @@ function DictionaryEntryCard({ entry }: { entry: DictionaryEntry }) {
       {entry.derivatives && (
         <div style={{ marginTop: "0.75rem", fontSize: "0.9em" }}>
           <strong>Derivatives:</strong>{" "}
-          <SanitizedHtml html={entry.derivatives} replaceLinks={true} />
+          <SanitizedHtml
+            html={entry.derivatives}
+            replaceLinks={true}
+            replaceEmDashes={true}
+          />
         </div>
       )}
 
