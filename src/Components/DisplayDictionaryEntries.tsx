@@ -4,6 +4,13 @@ import type {
   Sense,
   WordResponseData,
 } from "../types/types";
+import {
+  type InlineDefinition,
+  type Segment,
+  type SubSection,
+  sanitizeAndLink,
+  splitOnEmDashes,
+} from "../api/definitionUtils";
 import { SanitizedHtml } from "./SanitizedHtml";
 
 export function DisplayDictionaryEntries({ data }: { data: WordResponseData }) {
@@ -41,105 +48,236 @@ export function DisplayDictionaryEntries({ data }: { data: WordResponseData }) {
   );
 }
 
+// Shared styles for a numbered definition block (used by both SenseDisplay
+// and inline definitions split out of a definition string).
+const DEF_BLOCK_STYLE: React.CSSProperties = {
+  marginLeft: "1rem",
+  marginBottom: "0.75rem",
+  paddingLeft: "0.75rem",
+  borderLeft: "3px solid #4a5a8a",
+};
+
+const DEF_LABEL_STYLE: React.CSSProperties = {
+  fontSize: "1.05em",
+  color: "#d0d8f0",
+};
+
+interface DefinitionGroup {
+  definition: InlineDefinition;
+  subsections: SubSection[];
+}
+
+/**
+ * Groups a flat list of sibling segments (which always starts with a
+ * `"definition"`) into buckets where each bucket is one definition and all
+ * the subsections that immediately follow it.
+ */
+function groupSiblingSegments(segments: Segment[]): DefinitionGroup[] {
+  const groups: DefinitionGroup[] = [];
+  for (const seg of segments) {
+    if (seg.kind === "definition") {
+      groups.push({ definition: seg, subsections: [] });
+    } else {
+      // Subsection — attach to the last definition group.
+      groups.at(-1)?.subsections.push(seg);
+    }
+  }
+  return groups;
+}
+
 // Helper component for displaying a single sense/definition
 function SenseDisplay({ sense }: { sense: Sense }) {
+  // If the definition string contains inline numbered definitions (e.g. "—2)
+  // ..."), split them out so they render as siblings rather than nested inside
+  // this sense's border block.
+  const definitionSegments = sense.definition
+    ? splitOnEmDashes(sanitizeAndLink(sense.definition, true))
+    : [];
+
+  // Segments that belong inside this sense block: everything up to (but not
+  // including) the first inline definition marker.
+  const firstInlineDefIndex = definitionSegments.findIndex(
+    (s) => s.kind === "definition",
+  );
+  const innerSegments =
+    firstInlineDefIndex === -1
+      ? definitionSegments
+      : definitionSegments.slice(0, firstInlineDefIndex);
+
+  // Sibling definition blocks to render after this sense's div closes.
+  const siblingSegments =
+    firstInlineDefIndex === -1
+      ? []
+      : definitionSegments.slice(firstInlineDefIndex);
+
+  const hasNumber = Boolean(sense.number || sense.num);
+
   return (
-    <div
-      className="sense"
-      style={{ marginLeft: "1rem", marginBottom: "0.5rem" }}
-    >
-      {sense.number && <strong>{sense.number}. </strong>}
-      {sense.pre_num && (
-        <span style={{ fontStyle: "italic" }}>{sense.pre_num} </span>
-      )}
-      {sense.num && <strong>{sense.num}. </strong>}
+    <>
+      <div
+        className="sense"
+        style={
+          hasNumber
+            ? DEF_BLOCK_STYLE
+            : { marginLeft: "1rem", marginBottom: "0.75rem" }
+        }
+      >
+        {sense.number && (
+          <strong style={DEF_LABEL_STYLE}>{sense.number} </strong>
+        )}
+        {sense.pre_num && (
+          <span style={{ fontStyle: "italic" }}>{sense.pre_num} </span>
+        )}
+        {sense.num && <strong style={DEF_LABEL_STYLE}>{sense.num} </strong>}
 
-      {sense.grammar && (
-        <span style={{ color: "#aaa", fontSize: "0.9em" }}>
-          {sense.grammar.morphology && `[${sense.grammar.morphology}] `}
-          {sense.grammar.verbal_stem && `(${sense.grammar.verbal_stem}) `}
-          {sense.grammar.language_code && `{${sense.grammar.language_code}} `}
-          {sense.grammar.binyan_form &&
-            Array.isArray(sense.grammar.binyan_form) && (
-              <em>{sense.grammar.binyan_form.join(", ")} </em>
-            )}
-        </span>
-      )}
+        {sense.grammar && (
+          <span style={{ color: "#aaa", fontSize: "0.9em" }}>
+            {sense.grammar.morphology && `[${sense.grammar.morphology}] `}
+            {sense.grammar.verbal_stem && `(${sense.grammar.verbal_stem}) `}
+            {sense.grammar.language_code && `{${sense.grammar.language_code}} `}
+            {sense.grammar.binyan_form &&
+              Array.isArray(sense.grammar.binyan_form) && (
+                <em>{sense.grammar.binyan_form.join(", ")} </em>
+              )}
+          </span>
+        )}
 
-      {sense.form && <em style={{ color: "#bbb" }}>[{sense.form}] </em>}
-      {sense.plural_form && (
-        <em style={{ color: "#bbb" }}>[plural: {sense.plural_form}] </em>
-      )}
+        {sense.form && <em style={{ color: "#bbb" }}>[{sense.form}] </em>}
+        {sense.plural_form && (
+          <em style={{ color: "#bbb" }}>[plural: {sense.plural_form}] </em>
+        )}
 
-      {sense.definition ? (
-        <SanitizedHtml
-          html={sense.definition}
-          replaceLinks={true}
-          replaceEmDashes={true}
-        />
-      ) : null}
+        {/* Render only the segments that belong inside this block */}
+        {innerSegments.map((seg, i) => {
+          if (i === 0) {
+            return (
+              <span
+                key="def-first"
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized
+                dangerouslySetInnerHTML={{ __html: seg.html }}
+              />
+            );
+          }
+          return (
+            <span
+              key={`def-sub-${
+                // biome-ignore lint/suspicious/noArrayIndexKey: order is stable
+                i
+              }`}
+              style={{
+                display: "block",
+                paddingLeft: "1.25rem",
+                marginTop: "0.3rem",
+                borderLeft: "2px solid #3a3a4a",
+                color: "#b0b8c8",
+                fontSize: "0.93em",
+              }}
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized
+              dangerouslySetInnerHTML={{ __html: seg.html }}
+            />
+          );
+        })}
 
-      {sense.note && (
-        <div style={{ marginTop: "0.25rem", fontSize: "0.9em", color: "#bbb" }}>
-          Note:{" "}
-          <SanitizedHtml
-            html={sense.note}
-            replaceLinks={true}
-            replaceEmDashes={true}
-          />
-        </div>
-      )}
+        {sense.note && (
+          <div
+            style={{ marginTop: "0.25rem", fontSize: "0.9em", color: "#bbb" }}
+          >
+            Note:{" "}
+            <SanitizedHtml
+              html={sense.note}
+              replaceLinks={true}
+              replaceEmDashes={true}
+            />
+          </div>
+        )}
 
-      {sense.notes && (
-        <div style={{ marginTop: "0.25rem", fontSize: "0.9em", color: "#bbb" }}>
-          <SanitizedHtml
-            html={sense.notes}
-            replaceLinks={true}
-            replaceEmDashes={true}
-          />{" "}
-        </div>
-      )}
+        {sense.notes && (
+          <div
+            style={{ marginTop: "0.25rem", fontSize: "0.9em", color: "#bbb" }}
+          >
+            <SanitizedHtml
+              html={sense.notes}
+              replaceLinks={true}
+              replaceEmDashes={true}
+            />{" "}
+          </div>
+        )}
 
-      {sense.occurences && (
-        <span style={{ fontSize: "0.85em", color: "#999" }}>
-          {" "}
-          (occurs {sense.occurences}×)
-        </span>
-      )}
+        {sense.occurences && (
+          <span style={{ fontSize: "0.85em", color: "#999" }}>
+            {" "}
+            (occurs {sense.occurences}×)
+          </span>
+        )}
 
-      {sense.all_cited && <span style={{ color: "#999" }}> †</span>}
-      {sense.alternative && (
-        <div style={{ fontSize: "0.9em", color: "#aaa" }}>
-          Alternative: {sense.alternative}
-        </div>
-      )}
+        {sense.all_cited && <span style={{ color: "#999" }}> †</span>}
+        {sense.alternative && (
+          <div style={{ fontSize: "0.9em", color: "#aaa" }}>
+            Alternative: {sense.alternative}
+          </div>
+        )}
 
-      {sense.language_code && (
-        <span style={{ fontSize: "0.85em", color: "#999" }}>
-          {" "}
-          [{sense.language_code}]
-        </span>
-      )}
+        {sense.language_code && (
+          <span style={{ fontSize: "0.85em", color: "#999" }}>
+            {" "}
+            [{sense.language_code}]
+          </span>
+        )}
 
-      {sense.morphology && (
-        <span style={{ fontSize: "0.85em", color: "#999" }}>
-          {" "}
-          ({sense.morphology})
-        </span>
-      )}
+        {sense.morphology && (
+          <span style={{ fontSize: "0.85em", color: "#999" }}>
+            {" "}
+            ({sense.morphology})
+          </span>
+        )}
 
-      {/* Render nested sub-senses recursively */}
-      {sense.senses && sense.senses.length > 0 && (
-        <div style={{ marginTop: "0.25rem" }}>
-          {sense.senses.map((subSense, idx) => (
-            <SenseDisplay
-              key={`subsense-${subSense.number || subSense.num || idx}`}
-              sense={subSense}
+        {/* Render nested sub-senses recursively */}
+        {sense.senses && sense.senses.length > 0 && (
+          <div style={{ marginTop: "0.25rem" }}>
+            {sense.senses.map((subSense, idx) => (
+              <SenseDisplay
+                key={`subsense-${subSense.number || subSense.num || idx}`}
+                sense={subSense}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Inline numbered definitions rendered as siblings, not children.
+			    Group consecutive subsections into the preceding definition block. */}
+      {groupSiblingSegments(siblingSegments).map((group, i) => (
+        <div
+          key={`inline-def-${
+            // biome-ignore lint/suspicious/noArrayIndexKey: order is stable
+            i
+          }`}
+          style={DEF_BLOCK_STYLE}
+        >
+          <strong style={DEF_LABEL_STYLE}>{group.definition.label} </strong>
+          {/* biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized */}
+          <span dangerouslySetInnerHTML={{ __html: group.definition.html }} />
+          {group.subsections.map((sub, j) => (
+            <span
+              key={`inline-sub-${
+                // biome-ignore lint/suspicious/noArrayIndexKey: order is stable
+                j
+              }`}
+              style={{
+                display: "block",
+                paddingLeft: "1.25rem",
+                marginTop: "0.3rem",
+                borderLeft: "2px solid #3a3a4a",
+                color: "#b0b8c8",
+                fontSize: "0.93em",
+              }}
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized
+              dangerouslySetInnerHTML={{ __html: sub.html }}
             />
           ))}
         </div>
-      )}
-    </div>
+      ))}
+    </>
   );
 }
 
