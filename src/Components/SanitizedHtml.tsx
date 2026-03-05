@@ -1,37 +1,22 @@
-import DOMPurify, { type Config } from "dompurify";
-
-/**
- * Allowed HTML tags and attributes for Sefaria API content.
- * This permits basic formatting and links while stripping
- * dangerous elements like <script>, <iframe>, event handlers, etc.
- */
-const PURIFY_CONFIG: Config = {
-	ALLOWED_TAGS: [
-		"a",
-		"em",
-		"i",
-		"b",
-		"strong",
-		"span",
-		"sup",
-		"sub",
-		"br",
-		"div",
-	],
-	ALLOWED_ATTR: ["href", "dir", "class", "data-ref", "style"],
-};
+import type { Segment } from "../api/definitionUtils";
+import { sanitizeAndLink, splitOnEmDashes } from "../api/definitionUtils";
 
 interface SanitizedHtmlProps {
-	/** The raw HTML string to sanitize and render */
-	html: string;
-	/** The wrapper element tag (defaults to "span") */
-	as?: keyof React.JSX.IntrinsicElements;
-	/** Optional inline styles for the wrapper element */
-	style?: React.CSSProperties;
-	/** Optional CSS class name for the wrapper element */
-	className?: string;
-	/** Whether to replace relative links with links to sefaria */
-	replaceLinks: boolean;
+  /** The raw HTML string to sanitize and render */
+  html: string;
+  /** The wrapper element tag (defaults to "span") */
+  as?: keyof React.JSX.IntrinsicElements;
+  /** Optional inline styles for the wrapper element */
+  style?: React.CSSProperties;
+  /** Optional CSS class name for the wrapper element */
+  className?: string;
+  /** Whether to replace relative links with links to sefaria */
+  replaceLinks: boolean;
+  /**
+   * Whether to split on em-dashes and render each segment as a visually
+   * grouped sub-section. When false the raw HTML is rendered as-is.
+   */
+  replaceEmDashes?: boolean;
 }
 
 /**
@@ -41,37 +26,106 @@ interface SanitizedHtmlProps {
  * (e.g. `notes`, `derivatives`, `language_reference`, `definition`).
  */
 export function SanitizedHtml({
-	html,
-	as: Tag = "span",
-	style,
-	className,
-	replaceLinks,
+  html,
+  as: Tag = "span",
+  style,
+  className,
+  replaceLinks = true,
+  replaceEmDashes = true,
 }: SanitizedHtmlProps) {
-	const clean = DOMPurify.sanitize(html, PURIFY_CONFIG);
+  const linked = sanitizeAndLink(html, replaceLinks);
 
-	// Spread pattern: DOMPurify.sanitize strips dangerous tags/attributes before rendering
-	const innerHtmlProp = {
-		dangerouslySetInnerHTML: {
-			__html: replaceLinks ? replaceHTMLLinks(clean) : clean,
-		},
-	};
+  if (!replaceEmDashes) {
+    return (
+      <Tag
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized above
+        dangerouslySetInnerHTML={{ __html: linked }}
+        style={style}
+        className={className}
+      />
+    );
+  }
 
-	return <Tag {...innerHtmlProp} style={style} className={className} />;
+  const segments = splitOnEmDashes(linked);
+
+  if (segments.length === 1) {
+    return (
+      <Tag
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized above
+        dangerouslySetInnerHTML={{ __html: segments[0]?.html ?? "" }}
+        style={style}
+        className={className}
+      />
+    );
+  }
+
+  return (
+    <Tag style={style} className={className}>
+      {segments.map((segment, i) => (
+        <EmDashSegment
+          key={`seg-${
+            // biome-ignore lint/suspicious/noArrayIndexKey: order is stable
+            i
+          }`}
+          segment={segment}
+          isFirst={i === 0}
+        />
+      ))}
+    </Tag>
+  );
 }
 
-function replaceHTMLLinks(html: string): string {
-	// Replace href attributes in <a> tags with absolute Sefaria URLs
-	return html.replace(
-		/<a\s+([^>]*?\s+)?href="([^"]+)"/g,
-		// match: the entire <a> tag, beforeHref: any attributes before href, href: the URL in the href attribute
-		(match, beforeHref, href) => {
-			// If the href is already an absolute URL, leave it as is
-			if (/^https?:\/\//.test(href)) {
-				return match;
-			}
-			// Otherwise, prepend "https://www.sefaria.org"
-			const newHref = `https://www.sefaria.org${href}`;
-			return match.replace(`href="${href}"`, `href="${newHref}"`);
-		},
-	);
+// ---------------------------------------------------------------------------
+// Internal rendering components
+// ---------------------------------------------------------------------------
+
+interface EmDashSegmentProps {
+  segment: Segment;
+  isFirst: boolean;
+}
+
+function EmDashSegment({ segment, isFirst }: EmDashSegmentProps) {
+  if (isFirst) {
+    return (
+      <span
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized by caller
+        dangerouslySetInnerHTML={{ __html: segment.html }}
+      />
+    );
+  }
+
+  if (segment.kind === "definition") {
+    return (
+      <span
+        style={{
+          display: "block",
+          paddingLeft: "0.75rem",
+          marginTop: "0.75rem",
+          borderLeft: "3px solid #4a5a8a",
+        }}
+      >
+        <strong style={{ fontSize: "1.05em", color: "#d0d8f0" }}>
+          {segment.label}{" "}
+        </strong>
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized by caller */}
+        <span dangerouslySetInnerHTML={{ __html: segment.html }} />
+      </span>
+    );
+  }
+
+  // Plain sub-section: indented, muted, thinner rail.
+  return (
+    <span
+      style={{
+        display: "block",
+        paddingLeft: "1.25rem",
+        marginTop: "0.3rem",
+        borderLeft: "2px solid #3a3a4a",
+        color: "#b0b8c8",
+        fontSize: "0.93em",
+      }}
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized by caller
+      dangerouslySetInnerHTML={{ __html: segment.html }}
+    />
+  );
 }
