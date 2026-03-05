@@ -496,15 +496,6 @@ function DictionaryEntryCard({ entry }: { entry: DictionaryEntry }) {
         </div>
       )}
 
-      {/* Cross references */}
-      {entry.refs && entry.refs.length > 0 && (
-        <div
-          style={{ marginTop: "0.75rem", fontSize: "0.85em", color: "#bbb" }}
-        >
-          <strong>References:</strong> {entry.refs.join(", ")}
-        </div>
-      )}
-
       {/* Quotes */}
       {entry.quotes && entry.quotes.length > 0 && (
         <div
