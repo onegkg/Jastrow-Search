@@ -13,21 +13,18 @@ import {
 } from "../api/definitionUtils";
 import { SanitizedHtml } from "./SanitizedHtml";
 
-export function DisplayDictionaryEntries({ data }: { data: WordResponseData }) {
-  // Handle case where data is not an array
-  if (!Array.isArray(data)) {
-    return (
-      <div style={{ padding: "1rem", color: "#aaa" }}>
-        <p>No dictionary entries found.</p>
-      </div>
-    );
-  }
-
+export function DisplayDictionaryEntries({
+  data,
+  query,
+}: {
+  data: WordResponseData;
+  query: string;
+}) {
   // Handle empty array
-  if (data.length === 0) {
+  if (!Array.isArray(data) || data.length === 0) {
     return (
       <div style={{ padding: "1rem", color: "#aaa" }}>
-        <p>No results found for this word.</p>
+        <p>No results found for "{query}".</p>
       </div>
     );
   }
