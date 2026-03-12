@@ -13,9 +13,11 @@ export function App() {
 	const [lexiconEntries, setLexiconEntries] = useState<WordResponseData | null>(
 		null,
 	);
+	const [query, setQuery] = useState<string>("");
 
 	// Wrapper function to call the API and update the state with the results
 	const handleSearch = async (query: string) => {
+		setQuery(query);
 		const results = await getJastrowEntries(query);
 		setLexiconEntries(results || null);
 	};
@@ -45,7 +47,7 @@ export function App() {
 			{lexiconEntries === null ? (
 				<HomeScreen />
 			) : (
-				<DisplayDictionaryEntries data={lexiconEntries} />
+				<DisplayDictionaryEntries data={lexiconEntries} query={query} />
 			)}
 			<GithubLink />
 		</div>
