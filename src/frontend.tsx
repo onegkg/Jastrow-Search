@@ -29,3 +29,4 @@ if (import.meta.hot) {
 	// The hot module reloading API is not available in production.
 	createRoot(elem).render(app);
 }
+
